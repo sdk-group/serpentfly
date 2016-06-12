@@ -1,5 +1,8 @@
 'use strict'
 
+let _ = require('lodash');
+let Promise = require('bluebird');
+
 class Serpentary {
 	constructor(cfg) {
 		this.validators = {};
