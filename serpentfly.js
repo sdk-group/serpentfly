@@ -9,26 +9,27 @@ let Serpentary = require('./Serpentary.js');
 
 class Serpentfly {
 	constructor() {
-		this.worker = function () {
-			pm2.connect(function (err) {
+		this.worker = () => {
+			pm2.connect((err) => {
 				if (err) this.logger.error(err);
-				pm2.list(function (err, proclist) {
+				pm2.list((err, proclist) => {
 					return Promise.map(proclist, (proc) => {
 							return this.serpentary.validate(proc);
 						})
 						.then((res) => {
-							let to_restart = _.filter(res, r => (!r.success));
+							let to_restart = _.filter(proclist, (p, index) => (!res[index].success));
 							this.logger.info(res, "Processes status");
 							return Promise.map(to_restart, (proc) => {
+								let hname = proc.name;
+								let pm_id = proc.pm2_env.pm_id;
+								this.logger.info(`Restarting process ${hname} id ${pm_id} ; reason: ${_.get(_.find(res, (r)=>r.name==hname),'reason') }`);
 								return new Promise((resolve, reject) => {
-									let hname = proc.name;
-									this.logger.info(`Restarting process ${hname} at ${(new Date()).toString()}; reason: ${proc.reason}`);
-									pm2.restart(hname, (err, newproc) => {
-										clearTimeout(this.timer);
-										if (!err) {
+									let prc = this.pm2_cfg[hname];
+									pm2.delete(hname, () => {
+										pm2.start(prc, (err, newproc) => {
+											clearTimeout(this.timer);
 											resolve(true);
-										}
-										reject(err || new Error(`Process ${hname} not up.`));
+										});
 									});
 								});
 							});
@@ -42,6 +43,9 @@ class Serpentfly {
 							this.logger.error(err);
 							clearTimeout(this.timer);
 							this.timer = setTimeout(this.worker, this.config.interval);
+						})
+						.then((res) => {
+							pm2.disconnect();
 						});
 				});
 			});
