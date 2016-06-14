@@ -11,7 +11,7 @@ gulp.task('upd', function () {
 });
 
 gulp.task('test-upd', ['start-test'], function () {
-	gulp.watch(["src/**/*.js", "tests/**/*.js"], ['upd']);
+	gulp.watch(["*.js"], ['upd']);
 });
 
 gulp.task('start-test', function () {
