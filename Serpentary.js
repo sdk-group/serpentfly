@@ -10,7 +10,13 @@ class Serpentary {
 		this.validators_list = [];
 	}
 
-	validate(proc) {
+	validate(proc, procname) {
+		if (!proc && this.validators_config[procname])
+			return Promise.resolve({
+				name: procname,
+				success: false,
+				reason: 'Process is not running.'
+			});
 		if (!this.validators_config[proc.name])
 			return Promise.resolve({
 				name: proc.name,

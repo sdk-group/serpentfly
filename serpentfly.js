@@ -13,24 +13,37 @@ class Serpentfly {
 			pm2.connect((err) => {
 				if (err) this.logger.error(err);
 				pm2.list((err, proclist) => {
-					return Promise.map(proclist, (proc) => {
-							return this.serpentary.validate(proc);
+					let ls = _.keyBy(proclist, 'name');
+					return Promise.map(_.keys(this.hosts), (key) => {
+							return this.serpentary.validate(ls[key], key);
 						})
 						.then((res) => {
-							let to_restart = _.filter(proclist, (p, index) => (!res[index].success));
+							let to_restart = _.filter(res, (p) => (!p.success));
 							this.logger.info(res, "Processes status");
 							return Promise.map(to_restart, (proc) => {
-								let hname = proc.name;
-								let pm_id = proc.pm2_env.pm_id;
-								this.logger.info(`Restarting process ${hname} id ${pm_id} ; reason: ${_.get(_.find(res, (r)=>r.name==hname),'reason') }`);
+								let hname = _.clone(proc.name);
+								this.logger.info(`Restarting process ${hname} ; reason: ${_.get(_.find(res, (r)=>r.name==hname),'reason') }`);
 								return new Promise((resolve, reject) => {
 									let prc = this.pm2_cfg[hname];
+									if (!prc) resolve(false);
 									pm2.delete(hname, () => {
 										pm2.start(prc, (err, newproc) => {
 											clearTimeout(this.timer);
 											resolve(true);
 										});
 									});
+									// let env = _.clone(process.env);
+									// _.unset(env, 'pm_id');
+									// _.unset(env, 'name');
+									// require('child_process')
+									// 	.exec(`pm2 restart ${hname}`, {
+									// 		env
+									// 	}, (errcode, stdout, stderr) => {
+									// 		console.log(errcode);
+									// 		console.log(stdout);
+									// 		console.log(stderr);
+									// 		resolve(true);
+									// 	});
 								});
 							});
 						})
