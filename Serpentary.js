@@ -10,25 +10,20 @@ class Serpentary {
 		this.validators_list = [];
 	}
 
-	validate(proc, procname) {
-		if (!proc && this.validators_config[procname])
+	validate(procname) {
+		if (!this.validators_config[procname])
 			return Promise.resolve({
 				name: procname,
-				success: false,
-				reason: 'Process is not running.'
+				success: true,
+				reason: 'App not in config'
 			});
-		if (!this.validators_config[proc.name])
-			return Promise.resolve({
-				name: proc.name,
-				success: true
-			});
-		let validators = _.keys(this.validators_config[proc.name]);
+		let validators = _.keys(this.validators_config[procname]);
 		return Promise.map(validators, (valname) => {
-				return (valname != 'name') && _.isFunction(this.validators[valname]) ? this.validators[valname](proc, this.validators_config[proc.name][valname]) : true;
+				return _.isFunction(this.validators[valname]) ? this.validators[valname](this.validators_config[procname][valname]) : true;
 			})
 			.then(res => {
 				return {
-					name: proc.name,
+					name: procname,
 					success: _.every(res),
 					reason: _.filter(validators, (name, index) => !res[index])
 				};
@@ -36,7 +31,7 @@ class Serpentary {
 			.catch((err) => {
 				return {
 					success: false,
-					name: proc.name,
+					name: procname,
 					reason: err.message
 				};
 			});
